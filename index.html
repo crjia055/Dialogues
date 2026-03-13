@@ -248,6 +248,7 @@ async function generateAll(){
     try {
       const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`,{
         method:'POST',
+        mode:'cors',
         headers:{
           'xi-api-key': key,
           'Content-Type':'application/json',
@@ -260,8 +261,8 @@ async function generateAll(){
         })
       });
       if(!resp.ok){
-        const err = await resp.json().catch(()=>({}));
-        throw new Error(err.detail?.message || resp.statusText);
+        const errText = await resp.text().catch(()=>'no body');
+        throw new Error('HTTP ' + resp.status + ': ' + errText.slice(0,300));
       }
       const blob = await resp.blob();
       audioBlobs[i] = URL.createObjectURL(blob);
@@ -283,6 +284,7 @@ async function generateAll(){
     document.getElementById('btnPlay').disabled = false;
     document.getElementById('btnStop').disabled = false;
     setStatus('All lines ready! Press Play to listen.','success');
+    document.getElementById('btnDownload').disabled = false;
   } else {
     setStatus(`Generated ${completed}/${DIALOGUE.length} lines. Some failed — check your API key or credits.`,'error');
     if(completed>0) document.getElementById('btnPlay').disabled = false;
@@ -335,6 +337,16 @@ function stopAll(){
   document.querySelectorAll('.line').forEach(l=>l.classList.remove('active'));
   document.getElementById('btnPlay').disabled = false;
   setStatus('Stopped.');
+}
+
+function downloadAll(){
+  DIALOGUE.forEach((line, i) => {
+    if(!audioBlobs[i]) return;
+    const a = document.createElement("a");
+    a.href = audioBlobs[i];
+    a.download = "line_" + String(i+1).padStart(2,"0") + "_" + line.speaker + ".mp3";
+    a.click();
+  });
 }
 
 // Init
