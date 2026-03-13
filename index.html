@@ -101,6 +101,12 @@
 
 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 <div class="status-msg" id="statusMsg">Load your voices above, then press Generate to create the audio.</div>
+<div id="corsHelp" style="display:none;width:100%;max-width:720px;background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:14px 16px;font-size:13px;color:#856404;margin-bottom:16px;line-height:1.7;">
+  <b>Network blocked.</b> This usually means the page is not being served over https. Try:<br/>
+  1. Make sure you are using your GitHub Pages URL (https://...) not a file:// path<br/>
+  2. Or open the page via <a href="https://tiiny.host" target="_blank" style="color:#856404">tiiny.host</a> for instant https hosting<br/>
+  3. If on GitHub Pages, wait 1-2 min after uploading as it sometimes takes time to deploy
+</div>
 
 <div class="script" id="scriptLines"></div>
 
@@ -156,15 +162,20 @@ async function loadVoices(){
   setStatus('Loading voices...');
   try {
     const resp = await fetch('https://api.elevenlabs.io/v1/voices', {
-      headers:{'xi-api-key':key}
+      method: 'GET',
+      mode: 'cors',
+      headers:{ 'xi-api-key': key, 'Accept': 'application/json' }
     });
-    if(!resp.ok) throw new Error('Invalid API key or network error');
+    if(!resp.ok){
+      const body = await resp.text().catch(()=>'');
+      throw new Error('HTTP ' + resp.status + ': ' + body.slice(0,200));
+    }
     const data = await resp.json();
     allVoices = data.voices || [];
     populateVoiceSelects();
-    setStatus(`${allVoices.length} voices loaded. Now press Generate!`, 'success');
+    setStatus(allVoices.length + ' voices loaded. Now press Generate!', 'success');
   } catch(e){
-    setStatus('Error: '+e.message,'error');
+    setStatus('Error: ' + e.message + ' | Make sure you are on https://', 'error');
   }
 }
 
