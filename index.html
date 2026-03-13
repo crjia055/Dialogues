@@ -101,6 +101,7 @@
 
 <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
 <div class="status-msg" id="statusMsg">Load your voices above, then press Generate to create the audio.</div>
+<div id="errorLog" style="width:100%;max-width:720px;background:#fff0f0;border:1px solid #f5c6cb;border-radius:10px;padding:12px 16px;font-size:12px;color:#c0392b;margin-bottom:12px;display:none;word-break:break-all;"></div>
 <div id="corsHelp" style="display:none;width:100%;max-width:720px;background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:14px 16px;font-size:13px;color:#856404;margin-bottom:16px;line-height:1.7;">
   <b>Network blocked.</b> This usually means the page is not being served over https. Try:<br/>
   1. Make sure you are using your GitHub Pages URL (https://...) not a file:// path<br/>
@@ -353,7 +354,7 @@ function downloadAll(){
 renderScript();
 
 // Pre-fill key if already known
-document.getElementById('apiKey').value = 'sk_d1d959847b5373aa254387f7ce8a427377970442adb6599a';
+// Paste your API key in the box above
 </script>
 </body>
 </html>
