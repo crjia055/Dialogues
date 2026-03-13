@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="BE Dialogues"/>
+<title>Business English — Dialogue Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;background:#f0f2f5;font-family:'DM Sans',sans-serif;color:#1a1a2e;}
+  body{display:flex;flex-direction:column;align-items:center;padding:32px 16px 60px;}
+
+  .top-bar{width:100%;max-width:720px;display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;}
+  .app-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:#1a1a2e;}
+  .app-title em{color:#8a6a1f;font-style:italic;}
+
+  .api-row{width:100%;max-width:720px;display:flex;gap:8px;margin-bottom:28px;}
+  .api-row input{flex:1;padding:10px 14px;border:1px solid #d1d5db;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fff;color:#1a1a2e;outline:none;}
+  .api-row input:focus{border-color:#8a6a1f;}
+  .api-row button{padding:10px 18px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap;}
+  .api-row button:hover{background:#2d2d45;}
+
+  .voice-row{width:100%;max-width:720px;display:flex;gap:12px;margin-bottom:28px;flex-wrap:wrap;}
+  .voice-box{flex:1;min-width:200px;background:#fff;border:1px solid #e2e6ed;border-radius:12px;padding:14px 16px;}
+  .voice-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8a6a1f;font-weight:500;margin-bottom:8px;}
+  .voice-box select{width:100%;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:#1a1a2e;background:transparent;cursor:pointer;}
+
+  .dialogue-title{width:100%;max-width:720px;font-family:'Playfair Display',serif;font-size:18px;color:#1a1a2e;margin-bottom:6px;}
+  .dialogue-sub{width:100%;max-width:720px;font-size:13px;color:#6b7280;margin-bottom:20px;font-style:italic;}
+
+  .script{width:100%;max-width:720px;display:flex;flex-direction:column;gap:12px;margin-bottom:32px;}
+
+  .line{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px;border:1.5px solid transparent;cursor:pointer;transition:all 0.2s;background:#fff;}
+  .line:hover{border-color:#d4b483;}
+  .line.active{border-color:#8a6a1f;background:#fffdf5;}
+  .line.played{background:#f8f9fa;}
+  .line.loading{opacity:0.6;}
+
+  .speaker-pill{flex-shrink:0;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+  .pill-md{background:#e8f0fe;color:#1a56db;}
+  .pill-you{background:#fef3c7;color:#92400e;}
+
+  .line-text{font-size:14px;line-height:1.7;color:#1a1a2e;flex:1;}
+  .line-status{flex-shrink:0;font-size:18px;margin-top:2px;width:24px;text-align:center;}
+
+  .controls{width:100%;max-width:720px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .ctrl-btn{padding:12px 22px;border-radius:12px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.2s;border:none;}
+  .btn-primary{background:#1a1a2e;color:#fff;}
+  .btn-primary:hover{background:#2d2d45;}
+  .btn-secondary{background:#fff;color:#1a1a2e;border:1px solid #d1d5db;}
+  .btn-secondary:hover{border-color:#8a6a1f;color:#8a6a1f;}
+  .btn-gold{background:#8a6a1f;color:#fff;}
+  .btn-gold:hover{background:#6b5218;}
+  .btn-danger{background:#fff;color:#c0392b;border:1px solid #f5c6cb;}
+  .btn-danger:hover{background:#fff5f5;}
+
+  .progress-bar{width:100%;max-width:720px;height:4px;background:#e2e6ed;border-radius:4px;margin-bottom:24px;overflow:hidden;}
+  .progress-fill{height:100%;background:linear-gradient(90deg,#8a6a1f,#c9a84c);border-radius:4px;transition:width 0.3s;}
+
+  .status-msg{width:100%;max-width:720px;font-size:13px;color:#6b7280;margin-bottom:16px;min-height:20px;}
+  .status-msg.error{color:#c0392b;}
+  .status-msg.success{color:#1e7d4f;}
+
+  .loop-row{display:flex;align-items:center;gap:8px;margin-left:auto;}
+  .loop-row label{font-size:13px;color:#6b7280;}
+  .loop-row input[type=checkbox]{width:16px;height:16px;accent-color:#8a6a1f;cursor:pointer;}
+
+  @media(max-width:600px){
+    body{padding:20px 12px 40px;}
+    .api-row{flex-direction:column;}
+    .ctrl-btn{flex:1;text-align:center;}
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="app-title">Business English <em>Dialogues</em></div>
+</div>
+
+<div class="api-row">
+  <input type="password" id="apiKey" placeholder="Paste your ElevenLabs API key here..." autocomplete="off"/>
+  <button onclick="loadVoices()">Load voices</button>
+</div>
+
+<div class="voice-row">
+  <div class="voice-box">
+    <div class="voice-label">🎙 Your voice (VP)</div>
+    <select id="voiceYou"><option value="">— load voices first —</option></select>
+  </div>
+  <div class="voice-box">
+    <div class="voice-label">💼 MD's voice</div>
+    <select id="voiceMD"><option value="">— load voices first —</option></select>
+  </div>
+</div>
+
+<div class="dialogue-title">Deal Update with MD</div>
+<div class="dialogue-sub">Scenario: Quick one-on-one update on a live convertible bond deal — timeline, pricing sensitivity, and competitive pressure.</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+<div class="status-msg" id="statusMsg">Load your voices above, then press Generate to create the audio.</div>
+
+<div class="script" id="scriptLines"></div>
+
+<div class="controls">
+  <button class="ctrl-btn btn-primary" onclick="generateAll()" id="btnGenerate">⬇ Generate audio</button>
+  <button class="ctrl-btn btn-gold" onclick="playAll()" id="btnPlay" disabled>▶ Play all</button>
+  <button class="ctrl-btn btn-secondary" onclick="stopAll()" id="btnStop" disabled>⏹ Stop</button>
+  <div class="loop-row">
+    <input type="checkbox" id="loopToggle"/>
+    <label for="loopToggle">Loop</label>
+  </div>
+</div>
+
+<script>
+const DIALOGUE = [
+  {speaker:"MD",  text:"Hey, close the door. So where are we on the Apex deal?"},
+  {speaker:"You", text:"Overall I'd say we're in decent shape, but there are a few things I want to flag. On the execution side — legal is tracking well, counsel delivered the first draft of the prospectus yesterday and there are no major issues. Internal approvals are moving, we should have credit sign-off by end of week."},
+  {speaker:"MD",  text:"Good. What's the but?"},
+  {speaker:"You", text:"The but is on timing. The market has been a bit choppy this week — rates moving around, and we're picking up signals from the syndicate desk that some accounts are turning more risk-off. Nothing alarming yet, but I think we need to at least have a conversation about whether we want to hold the current launch window or build in some flexibility."},
+  {speaker:"MD",  text:"How much flexibility are we talking? The client is already pushing for a tight timeline."},
+  {speaker:"You", text:"I know — and that's actually the other thing I wanted to raise. The client has been quite sensitive on pricing. They've been pushing back on the conversion premium, want better terms than what we've modelled. I've been managing them carefully but I think we need to align on where our floor is before the next client call, otherwise they'll keep pushing and we'll end up in an awkward position."},
+  {speaker:"MD",  text:"What's your read — are they genuinely at risk of pulling the deal if they don't get the terms they want, or is this just negotiation?"},
+  {speaker:"You", text:"Honestly I think it's mostly negotiation — they've been committed throughout and the strategic rationale is strong. But they're clearly well-advised and their CFO has done this before. I don't think we should give ground easily, but we need a clear line internally so we're not improvising on the call."},
+  {speaker:"MD",  text:"Fair point. And what's this I'm hearing about other banks sniffing around?"},
+  {speaker:"You", text:"Yeah — that's the third thing. We've heard through the grapevine that at least two other houses have been in contact with the client recently. I don't think they're close to mandate territory, but the timing is uncomfortable given the market uncertainty. If we slip the timeline and the client starts feeling nervous, that's exactly the window a competitor would try to use."},
+  {speaker:"MD",  text:"So your recommendation is — what? Hold the timeline, draw a line on pricing, and stay close to the client?"},
+  {speaker:"You", text:"Exactly. Hold the timeline unless the market deteriorates meaningfully in the next 48 hours. On pricing I'd suggest we go back to the client with a clear rationale anchored to comps — not just holding firm, but showing them why the current structure is actually competitive. And I think it would be worth you reaching out to the CFO directly this week, just to keep the relationship warm and signal our commitment."},
+  {speaker:"MD",  text:"I can do that. Good update — this is exactly what I needed to know. Let's reconnect Thursday morning before the client call."},
+  {speaker:"You", text:"Perfect. I'll prepare a short briefing note by Wednesday evening so you have everything in front of you."},
+];
+
+// Preferred vivid American English voices (ElevenLabs well-known IDs)
+const PREFERRED_YOU = ["Rachel","Bella","Elli","Dorothy","Serena","Charlotte"];
+const PREFERRED_MD  = ["Adam","Arnold","Josh","Antoni","Liam","Patrick","Thomas"];
+
+let audioBlobs = new Array(DIALOGUE.length).fill(null);
+let currentIdx = -1;
+let isPlaying = false;
+let currentAudio = null;
+let allVoices = [];
+
+function setStatus(msg, type=''){
+  const el = document.getElementById('statusMsg');
+  el.textContent = msg;
+  el.className = 'status-msg' + (type ? ' '+type : '');
+}
+
+function setProgress(pct){ document.getElementById('progressFill').style.width = pct+'%'; }
+
+async function loadVoices(){
+  const key = document.getElementById('apiKey').value.trim();
+  if(!key){ setStatus('Please paste your API key first.','error'); return; }
+  setStatus('Loading voices...');
+  try {
+    const resp = await fetch('https://api.elevenlabs.io/v1/voices', {
+      headers:{'xi-api-key':key}
+    });
+    if(!resp.ok) throw new Error('Invalid API key or network error');
+    const data = await resp.json();
+    allVoices = data.voices || [];
+    populateVoiceSelects();
+    setStatus(`${allVoices.length} voices loaded. Now press Generate!`, 'success');
+  } catch(e){
+    setStatus('Error: '+e.message,'error');
+  }
+}
+
+function populateVoiceSelects(){
+  const enVoices = allVoices.filter(v=>v.labels&&(v.labels.accent||'').toLowerCase().includes('american')||
+    (v.labels&&(v.labels.language||'').toLowerCase().includes('english')));
+  const useVoices = enVoices.length > 0 ? enVoices : allVoices;
+
+  ['voiceYou','voiceMD'].forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = '';
+    useVoices.forEach(v=>{
+      const opt = document.createElement('option');
+      opt.value = v.voice_id;
+      opt.textContent = v.name + (v.labels&&v.labels.accent ? ` · ${v.labels.accent}` : '');
+      sel.appendChild(opt);
+    });
+  });
+
+  // Auto-select preferred voices
+  selectPreferred('voiceYou', PREFERRED_YOU);
+  selectPreferred('voiceMD',  PREFERRED_MD);
+}
+
+function selectPreferred(selectId, names){
+  const sel = document.getElementById(selectId);
+  for(const name of names){
+    const opt = Array.from(sel.options).find(o=>o.textContent.startsWith(name));
+    if(opt){ opt.selected=true; return; }
+  }
+}
+
+// Render script lines
+function renderScript(){
+  const container = document.getElementById('scriptLines');
+  container.innerHTML = '';
+  DIALOGUE.forEach((line,i)=>{
+    const div = document.createElement('div');
+    div.className = 'line';
+    div.id = 'line_'+i;
+    div.onclick = ()=>{ if(audioBlobs[i]) playLine(i); };
+    div.innerHTML = `
+      <div class="speaker-pill ${line.speaker==='MD'?'pill-md':'pill-you'}">${line.speaker==='MD'?'MD':'You'}</div>
+      <div class="line-text">${line.text}</div>
+      <div class="line-status" id="status_${i}">○</div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+async function generateAll(){
+  const key = document.getElementById('apiKey').value.trim();
+  if(!key){ setStatus('Please paste your API key first.','error'); return; }
+  const voiceYou = document.getElementById('voiceYou').value;
+  const voiceMD  = document.getElementById('voiceMD').value;
+  if(!voiceYou||!voiceMD){ setStatus('Please load and select voices first.','error'); return; }
+
+  document.getElementById('btnGenerate').disabled = true;
+  document.getElementById('btnPlay').disabled = true;
+  audioBlobs = new Array(DIALOGUE.length).fill(null);
+
+  let completed = 0;
+  for(let i=0;i<DIALOGUE.length;i++){
+    const line = DIALOGUE[i];
+    const voice = line.speaker==='MD' ? voiceMD : voiceYou;
+    setStatus(`Generating line ${i+1} of ${DIALOGUE.length}...`);
+    document.getElementById('status_'+i).textContent = '⏳';
+    document.getElementById('line_'+i).classList.add('loading');
+
+    try {
+      const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`,{
+        method:'POST',
+        headers:{
+          'xi-api-key': key,
+          'Content-Type':'application/json',
+          'Accept':'audio/mpeg'
+        },
+        body: JSON.stringify({
+          text: line.text,
+          model_id: 'eleven_turbo_v2',
+          voice_settings:{stability:0.45,similarity_boost:0.82,style:0.3,use_speaker_boost:true}
+        })
+      });
+      if(!resp.ok){
+        const err = await resp.json().catch(()=>({}));
+        throw new Error(err.detail?.message || resp.statusText);
+      }
+      const blob = await resp.blob();
+      audioBlobs[i] = URL.createObjectURL(blob);
+      completed++;
+      document.getElementById('status_'+i).textContent = '✓';
+      document.getElementById('line_'+i).classList.remove('loading');
+      document.getElementById('line_'+i).classList.add('played');
+      setProgress(Math.round((completed/DIALOGUE.length)*100));
+    } catch(e){
+      document.getElementById('status_'+i).textContent = '✗';
+      document.getElementById('line_'+i).classList.remove('loading');
+      setStatus('Error on line '+(i+1)+': '+e.message,'error');
+    }
+    await new Promise(r=>setTimeout(r,200));
+  }
+
+  document.getElementById('btnGenerate').disabled = false;
+  if(completed===DIALOGUE.length){
+    document.getElementById('btnPlay').disabled = false;
+    document.getElementById('btnStop').disabled = false;
+    setStatus('All lines ready! Press Play to listen.','success');
+  } else {
+    setStatus(`Generated ${completed}/${DIALOGUE.length} lines. Some failed — check your API key or credits.`,'error');
+    if(completed>0) document.getElementById('btnPlay').disabled = false;
+  }
+}
+
+function playLine(i){
+  if(!audioBlobs[i]) return;
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  // Highlight active line
+  document.querySelectorAll('.line').forEach(l=>l.classList.remove('active'));
+  document.getElementById('line_'+i).classList.add('active');
+  document.getElementById('line_'+i).scrollIntoView({behavior:'smooth',block:'nearest'});
+  currentIdx = i;
+
+  currentAudio = new Audio(audioBlobs[i]);
+  currentAudio.onended = ()=>{
+    document.getElementById('line_'+i).classList.remove('active');
+    document.getElementById('line_'+i).classList.add('played');
+    if(isPlaying) playNext();
+  };
+  currentAudio.play();
+}
+
+function playNext(){
+  const next = currentIdx + 1;
+  if(next < DIALOGUE.length && audioBlobs[next]){
+    playLine(next);
+  } else if(document.getElementById('loopToggle').checked){
+    playLine(0);
+  } else {
+    isPlaying = false;
+    document.getElementById('btnPlay').disabled = false;
+    setStatus('Playback complete.','success');
+  }
+}
+
+function playAll(){
+  if(!audioBlobs.some(b=>b)){ setStatus('Generate audio first.','error'); return; }
+  isPlaying = true;
+  document.getElementById('btnPlay').disabled = true;
+  // Find first available line
+  const first = audioBlobs.findIndex(b=>b);
+  playLine(first);
+}
+
+function stopAll(){
+  isPlaying = false;
+  if(currentAudio){ currentAudio.pause(); currentAudio=null; }
+  document.querySelectorAll('.line').forEach(l=>l.classList.remove('active'));
+  document.getElementById('btnPlay').disabled = false;
+  setStatus('Stopped.');
+}
+
+// Init
+renderScript();
+
+// Pre-fill key if already known
+document.getElementById('apiKey').value = 'sk_d1d959847b5373aa254387f7ce8a427377970442adb6599a';
+</script>
+</body>
+</html>
