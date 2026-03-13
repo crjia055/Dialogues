@@ -236,6 +236,7 @@ async function generateAll(){
 
   document.getElementById('btnGenerate').disabled = true;
   document.getElementById('btnPlay').disabled = true;
+  document.getElementById('errorLog').style.display='none';
   audioBlobs = new Array(DIALOGUE.length).fill(null);
 
   let completed = 0;
@@ -247,25 +248,31 @@ async function generateAll(){
     document.getElementById('line_'+i).classList.add('loading');
 
     try {
-      const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}`,{
-        method:'POST',
-        mode:'cors',
-        headers:{
-          'xi-api-key': key,
-          'Content-Type':'application/json',
-          'Accept':'audio/mpeg'
-        },
-        body: JSON.stringify({
+      const blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.elevenlabs.io/v1/text-to-speech/${voice}`, true);
+        xhr.setRequestHeader('xi-api-key', key);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Accept', 'audio/mpeg');
+        xhr.responseType = 'blob';
+        xhr.timeout = 30000;
+        xhr.onload = function(){
+          if(xhr.status === 200){
+            resolve(xhr.response);
+          } else {
+            const reader = new FileReader();
+            reader.onload = ()=> reject(new Error('HTTP ' + xhr.status + ': ' + reader.result.slice(0,200)));
+            reader.readAsText(xhr.response);
+          }
+        };
+        xhr.onerror = ()=> reject(new Error('Network error — CORS or connection refused'));
+        xhr.ontimeout = ()=> reject(new Error('Request timed out'));
+        xhr.send(JSON.stringify({
           text: line.text,
           model_id: 'eleven_turbo_v2',
           voice_settings:{stability:0.45,similarity_boost:0.82,style:0.3,use_speaker_boost:true}
-        })
+        }));
       });
-      if(!resp.ok){
-        const errText = await resp.text().catch(()=>'no body');
-        throw new Error('HTTP ' + resp.status + ': ' + errText.slice(0,300));
-      }
-      const blob = await resp.blob();
       audioBlobs[i] = URL.createObjectURL(blob);
       completed++;
       document.getElementById('status_'+i).textContent = '✓';
@@ -275,20 +282,23 @@ async function generateAll(){
     } catch(e){
       document.getElementById('status_'+i).textContent = '✗';
       document.getElementById('line_'+i).classList.remove('loading');
-      setStatus('Error on line '+(i+1)+': '+e.message,'error');
+      const el = document.getElementById('errorLog');
+      el.textContent = 'Error on line '+(i+1)+': '+e.message;
+      el.style.display='block';
+      setStatus('Error on line '+(i+1)+' — see red box above.','error');
+      break;
     }
-    await new Promise(r=>setTimeout(r,200));
+    await new Promise(r=>setTimeout(r,300));
   }
 
   document.getElementById('btnGenerate').disabled = false;
   if(completed===DIALOGUE.length){
     document.getElementById('btnPlay').disabled = false;
-    document.getElementById('btnStop').disabled = false;
-    setStatus('All lines ready! Press Play to listen.','success');
     document.getElementById('btnDownload').disabled = false;
-  } else {
-    setStatus(`Generated ${completed}/${DIALOGUE.length} lines. Some failed — check your API key or credits.`,'error');
-    if(completed>0) document.getElementById('btnPlay').disabled = false;
+    setStatus('All lines ready! Press Play to listen.','success');
+  } else if(completed>0){
+    document.getElementById('btnPlay').disabled = false;
+    setStatus(`Generated ${completed}/${DIALOGUE.length} lines. See error above.`,'error');
   }
 }
 
